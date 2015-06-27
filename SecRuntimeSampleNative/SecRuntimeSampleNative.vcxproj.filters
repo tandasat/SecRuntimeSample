@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resources">
+      <UniqueIdentifier>f6261e12-5da9-4598-8994-2f27a58d6358</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tga;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{02888fd3-64a8-4400-86b7-f403caa91329}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{ae83a111-639e-4ef9-bbb6-6a9e4c10b396}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\../Common">
+      <UniqueIdentifier>{d6e250ca-6d96-486a-8e71-6166567b915f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\../Common\ScopedResource">
+      <UniqueIdentifier>{ab083906-ba34-4dbc-a7b5-0d988622cb3a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Common\ScopedResource\scope_exit.h">
+      <Filter>Header Files\../Common\ScopedResource</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\ScopedResource\unique_resource.h">
+      <Filter>Header Files\../Common\ScopedResource</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SecRuntimeSampleNative.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Win32Api.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Process.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="pch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SecRuntimeSampleNative.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Process.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include=".clang-format" />
+  </ItemGroup>
+</Project>
