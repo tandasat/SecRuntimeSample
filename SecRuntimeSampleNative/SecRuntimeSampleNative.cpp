@@ -66,12 +66,12 @@ HRESULT LogPrint(const char *FunctionName, const char *Format, ...) {
     return status;
   }
 
-  char message[400];
-  status = ::sprintf_s(message, RTL_NUMBER_OF(message), "%-20s\t%s\n",
+  wchar_t message[400];
+  status = ::swprintf_s(message, RTL_NUMBER_OF(message), L"%-20S\t%S\n",
                        FunctionName, logMessage);
   if (!SUCCEEDED(status)) {
     return status;
   }
-  ::OutputDebugStringA(message);
+  ::OutputDebugString(message);
   return status;
 }

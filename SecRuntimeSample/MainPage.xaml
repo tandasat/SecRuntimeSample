@@ -9,7 +9,11 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Grid>
-        <TextBox x:Name="textBox" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Stretch" AcceptsReturn="True" IsReadOnly="True" FontFamily="Lucida Console" FontSize="12" Margin="0,0,-3.0517578125E-05,0"/>
+        <ScrollViewer x:Name="scrollViewer" Margin="10,10,10,10" >
+            <TextBox x:Name="textBox" Text="TextBox" 
+                 VerticalAlignment="Stretch" AcceptsReturn="True" IsReadOnly="True" 
+                 FontFamily="Lucida Console" FontSize="12" />
+        </ScrollViewer>
 
     </Grid>
 </Page>

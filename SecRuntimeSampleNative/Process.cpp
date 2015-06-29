@@ -67,6 +67,47 @@ std::wstring DumpInList(const std::vector<ProcessInfo> &Processes);
 // implementations
 //
 
+// Enumerates all processes and returns the result in a text
+std::wstring EnumProcesses() {
+  std::vector<ProcessInfo> processes;
+
+  // Brute force to find processes
+  for (auto pid = 4; pid < 10000; pid += 4) {
+    // Try to open the PID
+    HANDLE processHandle = nullptr;
+    const auto status =
+        g_Win32Api.OpenProcessForQuery(nullptr, pid, &processHandle);
+    if (status != S_OK || !processHandle) {
+      if (status != E_ACCESSDENIED && status != E_INVALIDARG) {
+        LOG_DEBUG("%5lu %08x", pid, status);
+      }
+      continue;
+    }
+    const auto scopedCloseHandle = stdexp::make_scope_exit(
+        [processHandle]() { ::CloseHandle(processHandle); });
+
+    // Build process information and store it
+    processes.push_back(MakeProcessInfo(pid, processHandle));
+  }
+
+  // Sort the process list based on processes' created times
+  std::sort(std::begin(processes), std::end(processes),
+            [](const ProcessInfo &Lhs, const ProcessInfo &Rhs) {
+              if (Lhs.CreationTime.dwHighDateTime ==
+                  Rhs.CreationTime.dwHighDateTime) {
+                return Lhs.CreationTime.dwLowDateTime <
+                       Rhs.CreationTime.dwLowDateTime;
+              }
+              {
+                return Lhs.CreationTime.dwHighDateTime <
+                       Rhs.CreationTime.dwHighDateTime;
+              }
+            });
+
+  DumpInTree(processes);
+  return DumpInList(processes);
+}
+
 // Returns process owner's name
 std::wstring GetProcessOwner(HANDLE ProcessHandle) {
   HANDLE processTokenHandle = nullptr;
@@ -243,6 +284,7 @@ std::vector<std::wstring> GetPrivilegeNames(HANDLE ProcessHandle) {
   return privilegeNames;
 }
 
+// Builds ProcessInfo and returns it
 ProcessInfo MakeProcessInfo(DWORD ProcessId, HANDLE ProcessHandle) {
   wchar_t fullPath[MAX_PATH] = {};
   DWORD size = _countof(fullPath);
@@ -274,23 +316,7 @@ ProcessInfo MakeProcessInfo(DWORD ProcessId, HANDLE ProcessHandle) {
   };
 }
 
-void Tree(const ProcessInfo &Process, const std::wstring &Padding) {
-  SYSTEMTIME st = {};
-  FileTimeToSystemTime(&Process.CreationTime, &st);
-
-  std::vector<wchar_t> time(1000);
-  ::GetTimeFormatEx(nullptr, TIME_FORCE24HOURFORMAT | TIME_NOTIMEMARKER, &st,
-                    L"hh:mm:ss", time.data(), time.size());
-
-  char head[100];
-  ::sprintf_s(head, "%S> %u", Padding.c_str(), Process.ProcessId);
-
-  LOG_DEBUG("%-15s  - %S %S", head, time.data(), Process.ImagePath.c_str());
-  for (auto process : Process.Children) {
-    Tree(*process, Padding + L"  ");
-  }
-}
-
+// Dumps all process information as a tree-ish view
 void DumpInTree(const std::vector<ProcessInfo> &Processes) {
   std::vector<DWORD_PTR> deadParentPIDs;
   for (const auto &current : Processes) {
@@ -337,6 +363,25 @@ void DumpInTree(const std::vector<ProcessInfo> &Processes) {
   }
 }
 
+// Prints out a process tree
+void Tree(const ProcessInfo &Process, const std::wstring &Padding) {
+  SYSTEMTIME st = {};
+  FileTimeToSystemTime(&Process.CreationTime, &st);
+
+  std::vector<wchar_t> time(1000);
+  ::GetTimeFormatEx(nullptr, TIME_FORCE24HOURFORMAT | TIME_NOTIMEMARKER, &st,
+                    L"hh:mm:ss", time.data(), time.size());
+
+  char head[100];
+  ::sprintf_s(head, "%S> %u", Padding.c_str(), Process.ProcessId);
+
+  LOG_DEBUG("%-15s  - %S %S", head, time.data(), Process.ImagePath.c_str());
+  for (auto process : Process.Children) {
+    Tree(*process, Padding + L"  ");
+  }
+}
+
+// Dumps all process in as a list
 std::wstring DumpInList(const std::vector<ProcessInfo> &Processes) {
   std::wstring text;
   for (auto &&process : Processes) {
@@ -379,46 +424,6 @@ std::wstring DumpInList(const std::vector<ProcessInfo> &Processes) {
     text += entry;
   }
   return text;
-}
-
-std::wstring EnumProcesses() {
-  std::vector<ProcessInfo> processes;
-
-  // Brute force to find processes
-  for (auto pid = 4; pid < 10000; pid += 4) {
-    // Try to open the PID
-    HANDLE processHandle = nullptr;
-    const auto status =
-        g_Win32Api.OpenProcessForQuery(nullptr, pid, &processHandle);
-    if (status != S_OK || !processHandle) {
-      if (status != E_ACCESSDENIED && status != E_INVALIDARG) {
-        LOG_DEBUG("%5lu %08x", pid, status);
-      }
-      continue;
-    }
-    const auto scopedCloseHandle = stdexp::make_scope_exit(
-        [processHandle]() { ::CloseHandle(processHandle); });
-
-    // Build process information and store it
-    processes.push_back(MakeProcessInfo(pid, processHandle));
-  }
-
-  // Sort the process list based on processes' created times
-  std::sort(std::begin(processes), std::end(processes),
-            [](const ProcessInfo &Lhs, const ProcessInfo &Rhs) {
-              if (Lhs.CreationTime.dwHighDateTime ==
-                  Rhs.CreationTime.dwHighDateTime) {
-                return Lhs.CreationTime.dwLowDateTime <
-                       Rhs.CreationTime.dwLowDateTime;
-              }
-              {
-                return Lhs.CreationTime.dwHighDateTime <
-                       Rhs.CreationTime.dwHighDateTime;
-              }
-            });
-
-  DumpInTree(processes);
-  return DumpInList(processes);
 }
 
 }  // namespace Process

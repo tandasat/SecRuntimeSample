@@ -3,14 +3,29 @@
 // found in the LICENSE file.
 
 //
-// This module declares interfaces to functions written in assembler.
+// This module declares everything related to Win32.
 //
 #pragma once
+#include <windows.h>
 
+extern "C" {
 ////////////////////////////////////////////////////////////////////////////////
 //
 // macro utilities
 //
+
+// RTL_ to avoid collisions in the global namespace.
+// I don't believe there are possible/likely constant RootDirectory
+// or SecurityDescriptor values other than NULL, so they are hardcoded.
+// As well, the string will generally be const, so we cast that away.
+#define RTL_CONSTANT_OBJECT_ATTRIBUTES(n, a)                                \
+  {                                                                         \
+    sizeof(OBJECT_ATTRIBUTES), NULL, RTL_CONST_CAST(PUNICODE_STRING)(n), a, \
+        NULL, NULL                                                          \
+  }
+
+// This synonym is more appropriate for initializing what isn't actually const.
+#define RTL_INIT_OBJECT_ATTRIBUTES(n, a) RTL_CONSTANT_OBJECT_ATTRIBUTES(n, a)
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -21,29 +36,6 @@
 //
 // types
 //
-
-////////////////////////////////////////////////////////////////////////////////
-//
-// prototypes
-//
-
-////////////////////////////////////////////////////////////////////////////////
-//
-// variables
-//
-
-////////////////////////////////////////////////////////////////////////////////
-//
-// implementations
-//
-
-
-
-
-#pragma once
-#include <windows.h>
-
-extern "C" {
 
 typedef struct tagPROCESSENTRY32 {
   DWORD dwSize;
@@ -89,19 +81,6 @@ typedef struct _OBJECT_ATTRIBUTES {
   PVOID SecurityQualityOfService;
 } OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
 
-// RTL_ to avoid collisions in the global namespace.
-// I don't believe there are possible/likely constant RootDirectory
-// or SecurityDescriptor values other than NULL, so they are hardcoded.
-// As well, the string will generally be const, so we cast that away.
-#define RTL_CONSTANT_OBJECT_ATTRIBUTES(n, a)                                \
-  {                                                                         \
-    sizeof(OBJECT_ATTRIBUTES), NULL, RTL_CONST_CAST(PUNICODE_STRING)(n), a, \
-        NULL, NULL                                                          \
-  }
-
-// This synonym is more appropriate for initializing what isn't actually const.
-#define RTL_INIT_OBJECT_ATTRIBUTES(n, a) RTL_CONSTANT_OBJECT_ATTRIBUTES(n, a)
-
 typedef struct {
   HANDLE UniqueProcess;
   HANDLE UniqueThread;
@@ -109,7 +88,35 @@ typedef struct {
 
 typedef _Return_type_success_(return >= 0) LONG NTSTATUS;
 
-BOOL WINAPI AllocConsole(void);
+enum PROCESSINFOCLASS {
+  ProcessBasicInformation = 0,
+};
+
+typedef struct _tagPROCESS_BASIC_INFORMATION {
+  PVOID ExitStatus;
+  PVOID PebBaseAddress;
+  PVOID AffinityMask;
+  PVOID BasePriority;
+  DWORD_PTR UniqueProcessId;
+  DWORD_PTR InheritedFromUniqueProcessId;
+} PROCESS_BASIC_INFORMATION;
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// prototypes
+//
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// variables
+//
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// implementations
+//
+
+BOOL WINAPI AllocConsole();
 
 HANDLE WINAPI CreateFile(_In_ LPCTSTR lpFileName, _In_ DWORD dwDesiredAccess,
                          _In_ DWORD dwShareMode,
@@ -197,19 +204,6 @@ NTSTATUS WINAPI NtOpenProcess(_Out_ PHANDLE ProcessHandle,
                               _In_ POBJECT_ATTRIBUTES ObjectAttributes,
                               _In_opt_ PCLIENT_ID ClientId);
 
-enum PROCESSINFOCLASS {
-  ProcessBasicInformation = 0,
-};
-
-typedef struct _tagPROCESS_BASIC_INFORMATION {
-  PVOID ExitStatus;
-  PVOID PebBaseAddress;
-  PVOID AffinityMask;
-  PVOID BasePriority;
-  DWORD_PTR UniqueProcessId;
-  DWORD_PTR InheritedFromUniqueProcessId;
-} PROCESS_BASIC_INFORMATION;
-
 NTSTATUS WINAPI NtQueryInformationProcess(
     _In_ HANDLE ProcessHandle, _In_ PROCESSINFOCLASS ProcessInformationClass,
     _Out_ PVOID ProcessInformation, _In_ ULONG ProcessInformationLength,
@@ -243,7 +237,13 @@ HRESULT WINAPI OpenProcessTokenForQuery(HANDLE ProcessHandle,
 HRESULT WINAPI SetDeveloperUnlockState(BOOLEAN Data);
 HRESULT WINAPI QueryKernelPrivilegeCache(wchar_t *lpInBuffer,
                                          LPVOID lpOutBuffer);
-}
+
+}  // extern "C"
+
+//
+// The following declares the Win32Api class using the above Win32 API
+// prototypes
+//
 
 #define WIN32API_STRINGIFY(x) #x
 #define WIN32API_TOSTRING(x) WIN32API_STRINGIFY(x)
@@ -306,10 +306,12 @@ class Win32Api {
   Win32Api &operator=(const Win32Api &) = delete;
 
  private:
+  // Returns a base address of KernelBase.dll
   static HMODULE GetKernelBase() {
     return GetBaseAddress(&::DisableThreadLibraryCalls);
   }
 
+  // Returns a base address of the given address
   static HMODULE GetBaseAddress(const void *Address) {
     MEMORY_BASIC_INFORMATION mbi = {};
     if (!::VirtualQuery(Address, &mbi, sizeof(mbi))) {
